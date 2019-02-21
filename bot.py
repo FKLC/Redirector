@@ -21,7 +21,12 @@ async def on_message(message):
         message.content = message.content.replace(
             f"<@!{mention}>", ""
         )
-    if not message.content.strip() and not message.embeds:
+    if (
+        message.type == discord.MessageType.default
+        and not message.content.strip()
+        and not message.attachments
+        and not message.embeds
+    ):
         await message.delete()
         for mentioned_user in message.mentions:
             await mentioned_user.send(
