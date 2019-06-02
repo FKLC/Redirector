@@ -50,7 +50,7 @@ async def to(ctx, channel: str, limit_or_after_id: int, before_id: int = 0):
 
         embed = discord.Embed(
             title="Messages Redirected",
-            description=f"Source Channel: #{ctx.message.channel_mentions[0].name}",
+            description=f"Source Channel: #{ctx.channel.name}",
         )
         for message in messages:
             embed.add_field(
