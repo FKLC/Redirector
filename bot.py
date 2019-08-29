@@ -2,8 +2,16 @@ import os
 
 import discord
 from discord.ext import commands
+import dbl
 
 bot = commands.Bot(command_prefix="r!", help_command=None)
+
+
+@bot.event
+async def on_ready():
+    await bot.change_presence(
+        status=discord.Status.online, activity=discord.Game(name="FKLC.dev | r!help")
+    )
 
 
 @bot.event
@@ -95,4 +103,14 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
+class DBLAPI(commands.Cog):
+    """Handles interactions with the discordbots.org API"""
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.token = os.environ.get("DBL_TOKEN")
+        self.dblpy = dbl.DBLClient(self.bot, self.token, autopost=True)
+
+
+bot.add_cog(DBLAPI(bot))
 bot.run(os.environ.get("TOKEN"))
