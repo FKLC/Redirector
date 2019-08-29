@@ -85,7 +85,7 @@ async def help(ctx):
     )
 
     embed.add_field(
-        name="@anyone",
+        name="@<someone>",
         value="Redirects any mention to mentioned user DM if message content is empty",
         inline=False,
     )
