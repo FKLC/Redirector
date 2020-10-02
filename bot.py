@@ -1,17 +1,16 @@
 import os
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import dbl
 
 bot = commands.Bot(command_prefix="r!", help_command=None)
+bot.redirect_counter = 0
 
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(
-        status=discord.Status.online, activity=discord.Game(name="FKLC.dev | r!help")
-    )
+    presence_updater.start()
 
 
 @bot.event
@@ -32,6 +31,8 @@ async def on_message(message):
                 f"{message.author.display_name} mentioned you on"
                 f" https://discordapp.com/channels/{message.guild.id}/{message.channel.id}/"
             )
+        bot.redirect_counter += len(message.mentions)
+        return
     await bot.process_commands(message)
 
 
@@ -51,7 +52,7 @@ async def to(ctx, channel: str, limit_or_after_id: int, before_id: int = 0):
                 after_message,
             ]
         elif limit_or_after_id > 25 and before_id == 0:
-            await ctx.send(f"You can't redirect more than 25 messages in one time!")
+            await ctx.send(f"You can't redirect more than 25 messages at a time!")
         else:
             messages = await ctx.history(limit=limit_or_after_id + 1).flatten()
             messages.reverse()
@@ -68,6 +69,7 @@ async def to(ctx, channel: str, limit_or_after_id: int, before_id: int = 0):
             )
         await ctx.message.channel_mentions[0].send(embed=embed)
         await ctx.channel.delete_messages(messages)
+        bot.redirect_counter += len(messages)
     else:
         await ctx.send(f"Channels must be mentioned like `#{channel}`")
 
@@ -101,6 +103,16 @@ async def help(ctx):
     )
 
     await ctx.send(embed=embed)
+
+
+@tasks.loop(seconds=60)
+async def presence_updater():
+    await bot.change_presence(
+        status=discord.Status.online,
+        activity=discord.Game(
+            name=f"FKLC.dev | r!help | {bot.redirect_counter} messages redirected!"
+        ),
+    )
 
 
 class DBLAPI(commands.Cog):
