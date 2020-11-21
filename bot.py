@@ -1,5 +1,6 @@
 import os
 import signal
+import sys
 from urllib.parse import urlparse
 
 import dbl
@@ -15,6 +16,7 @@ bot.redirect_counter = 0
 async def on_ready():
     presence_updater.start()
     sync_message_count()
+    bot.loop.add_signal_handler(signal.SIGTERM, send_message_count)
 
 
 @bot.event
@@ -128,7 +130,7 @@ class DBLAPI(commands.Cog):
         self.dblpy = dbl.DBLClient(self.bot, self.token, autopost=True)
 
 
-def send_message_count():
+def send_message_count(*args):
     connection = make_db_connection()
     cursor = connection.cursor()
     cursor.execute(
@@ -137,12 +139,15 @@ def send_message_count():
     connection.commit()
     cursor.close()
     connection.close()
+    sys.exit(0)
 
 
 def sync_message_count():
     connection = make_db_connection()
     cursor = connection.cursor()
-    cursor.execute("SELECT SUM (sent_messages) FROM message_counter;")
+    cursor.execute(
+        'SELECT (sent_messages) FROM message_counter ORDER BY "ID" DESC LIMIT 1'
+    )
     bot.redirect_counter += cursor.fetchone()[0] or 0
     cursor.close()
     connection.close()
@@ -157,6 +162,5 @@ def make_db_connection():
     )
 
 
-bot.loop.add_signal_handler(signal.SIGTERM, send_message_count)
 bot.add_cog(DBLAPI(bot))
 bot.run(os.environ.get("TOKEN"))
