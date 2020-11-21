@@ -143,13 +143,13 @@ def sync_message_count():
     connection = make_db_connection()
     cursor = connection.cursor()
     cursor.execute("SELECT SUM (sent_messages) FROM message_counter;")
-    bot.redirect_counter += cursor.fetchone()[0]
+    bot.redirect_counter += cursor.fetchone()[0] or 0
     cursor.close()
     connection.close()
 
 
 def make_db_connection():
-    parsed_url = urlparse(os.environ.get("DATABASE"))
+    parsed_url = urlparse(os.environ.get("DATABASE_URL"))
     user, rest, port = parsed_url.netloc.split(":")
     password, host = rest.split("@")
     return psycopg2.connect(
