@@ -1,8 +1,11 @@
 import os
+import signal
+from urllib.parse import urlparse
 
-import discord
-from discord.ext import commands, tasks
 import dbl
+import discord
+import psycopg2
+from discord.ext import commands, tasks
 
 bot = commands.Bot(command_prefix="r!", help_command=None)
 bot.redirect_counter = 0
@@ -11,6 +14,7 @@ bot.redirect_counter = 0
 @bot.event
 async def on_ready():
     presence_updater.start()
+    sync_message_count()
 
 
 @bot.event
@@ -63,7 +67,7 @@ async def to(ctx, channel: str, limit_or_after_id: int, before_id: int = 0):
         )
         for message in messages:
             embed.add_field(
-                name=f"{message.author.name}#{message.author.discriminator} ({message.author.nick})",
+                name=f"{message.author.name}#{message.author.discriminator} ({message.author.display_name})",
                 value=message.content if message.content else "<Unsupported Content>",
                 inline=False,
             )
@@ -79,26 +83,26 @@ async def help(ctx):
     embed = discord.Embed(
         title="Redirector Bot",
         description="Redirector Bot is a discord server moderation bot. "
-        "It helps you to keep clean your chat with removing and sending "
-        "DMs to users if message content is only mention of users. "
-        "Also it can redirect messages to other channels. "
+        "It helps you to keep clean your chat by removing mentions and "
+        "DM'ing to the users if the message content is only mention of"
+        " users. Also it can redirect messages to other channels. "
         "List of commands are:",
         color=0xEEE657,
     )
 
     embed.add_field(
         name="@<someone>",
-        value="Redirects any mention to mentioned user DM if message content is empty",
+        value="DM's to the user mentioned and deletes the message from server's chat",
         inline=False,
     )
     embed.add_field(
-        name="r!to #channel last_n_messages",
-        value="Redirects last n messages into the mentioned channel",
+        name="r!to #<channel> <number_of_messages>",
+        value="Redirects specified numbers of messages to #channel",
         inline=False,
     )
     embed.add_field(
-        name="r!to #channel after_message_id before_message_id",
-        value="Redirects messages around after_message_id and before_message_id into the mentioned channel",
+        name="r!to #<channel> after_message_id before_message_id",
+        value="Redirects messages between after_message_id and before_message_id to #channel",
         inline=False,
     )
 
@@ -124,5 +128,35 @@ class DBLAPI(commands.Cog):
         self.dblpy = dbl.DBLClient(self.bot, self.token, autopost=True)
 
 
+def send_message_count():
+    connection = make_db_connection()
+    cursor = connection.cursor()
+    cursor.execute(
+        f"INSERT INTO message_counter(sent_messages) VALUES ({bot.redirect_counter});"
+    )
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+
+def sync_message_count():
+    connection = make_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("SELECT SUM (sent_messages) FROM message_counter;")
+    bot.redirect_counter += cursor.fetchone()[0]
+    cursor.close()
+    connection.close()
+
+
+def make_db_connection():
+    parsed_url = urlparse(os.environ.get("DATABASE"))
+    user, rest, port = parsed_url.netloc.split(":")
+    password, host = rest.split("@")
+    return psycopg2.connect(
+        user=user, password=password, host=host, port=port, database=parsed_url.path[1:]
+    )
+
+
+bot.loop.add_signal_handler(signal.SIGTERM, send_message_count)
 bot.add_cog(DBLAPI(bot))
 bot.run(os.environ.get("TOKEN"))
