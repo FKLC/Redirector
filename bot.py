@@ -30,6 +30,7 @@ async def on_message(message):
         and not message.content.strip()
         and not message.attachments
         and not message.embeds
+        and not message.stickers
     ):
         await message.delete()
         for mentioned_user in message.mentions:
