@@ -3,7 +3,6 @@ import signal
 import sys
 from urllib.parse import urlparse
 
-import dbl
 import discord
 import psycopg2
 from discord.ext import commands, tasks
@@ -31,6 +30,7 @@ async def on_message(message):
         and not message.attachments
         and not message.embeds
         and not message.stickers
+        and not message.reference
     ):
         await message.delete()
         for mentioned_user in message.mentions:
@@ -122,15 +122,6 @@ async def presence_updater():
     )
 
 
-class DBLAPI(commands.Cog):
-    """Handles interactions with the discordbots.org API"""
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.token = os.environ.get("DBL_TOKEN")
-        self.dblpy = dbl.DBLClient(self.bot, self.token, autopost=True)
-
-
 def send_message_count(*args):
     connection = make_db_connection()
     cursor = connection.cursor()
@@ -163,5 +154,4 @@ def make_db_connection():
     )
 
 
-bot.add_cog(DBLAPI(bot))
 bot.run(os.environ.get("TOKEN"))
